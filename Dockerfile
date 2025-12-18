@@ -2,19 +2,24 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Copier les fichiers de dépendances
+# Copier package.json et package-lock.json
 COPY package*.json ./
 
-# Installer les dépendances
-RUN npm install
+# Copier le dossier prisma (si existe)
+COPY prisma ./prisma/ 2>/dev/null || echo "No prisma folder"
 
-# Copier tout le code source
+# Installer les dépendances
+RUN npm install --legacy-peer-deps || npm install
+
+# Copier tout le reste du code
 COPY . .
 
-# Build l'application Next.js
+# Générer Prisma (optionnel, peut échouer sans erreur)
+RUN npx prisma generate 2>/dev/null || echo "Prisma generation skipped"
+
+# Build Next.js
 RUN npm run build
 
 EXPOSE 3000
 
-# Démarrer l'application
 CMD ["npm", "start"]
