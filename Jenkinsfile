@@ -3,44 +3,49 @@ pipeline {
     
     environment {
         REGISTRY = '192.168.56.10:5000'
-        APP_VM = '192.168.56.11'
+        IMAGE_NAME = 'zenstack-chatbot'
+        IMAGE_TAG = 'latest'
     }
     
     stages {
         stage('Build Image') {
             steps {
                 echo '🏗️ Construction de l\'image Docker...'
-                sh '''
-                    docker build -t ${REGISTRY}/zenstack-chatbot:latest .
-                '''
+                script {
+                    // Récupérer les credentials depuis Jenkins
+                    withCredentials([
+                        string(credentialsId: 'auth-secret', variable: 'AUTH_SECRET'),
+                        string(credentialsId: 'database-url', variable: 'DATABASE_URL')
+                    ]) {
+                        sh """
+                            docker build \
+                              --build-arg AUTH_SECRET='${AUTH_SECRET}' \
+                              --build-arg DATABASE_URL='${DATABASE_URL}' \
+                              -t ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} .
+                        """
+                    }
+                }
             }
         }
         
         stage('Push to Registry') {
             steps {
-                echo '📤 Push vers le registry Docker...'
-                sh '''
-                    docker push ${REGISTRY}/zenstack-chatbot:latest
-                '''
+                echo '📤 Push vers le registry...'
+                sh "docker push ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
             }
         }
         
         stage('Deploy') {
             steps {
-                echo '🚀 Déploiement sur le serveur...'
-                sh '''
-                    ssh -o StrictHostKeyChecking=no vagrant@${APP_VM} "docker pull ${REGISTRY}/zenstack-chatbot:latest"
-                    ssh -o StrictHostKeyChecking=no vagrant@${APP_VM} "docker stop zenstack-chatbot || true"
-                    ssh -o StrictHostKeyChecking=no vagrant@${APP_VM} "docker rm zenstack-chatbot || true"
-                    ssh -o StrictHostKeyChecking=no vagrant@${APP_VM} "docker run -d --name zenstack-chatbot -p 3000:3000 ${REGISTRY}/zenstack-chatbot:latest"
-                '''
+                echo '🚀 Déploiement...'
+                // Votre logique de déploiement
             }
         }
     }
     
     post {
         success {
-            echo '✅ Pipeline terminé avec succès!'
+            echo '✅ Pipeline réussi!'
         }
         failure {
             echo '❌ Pipeline a échoué!'
