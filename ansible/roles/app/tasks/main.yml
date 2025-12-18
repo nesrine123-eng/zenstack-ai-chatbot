@@ -1,0 +1,21 @@
+- name: Install Node.js dependencies
+  apt:
+    name:
+      - curl
+      - software-properties-common
+    state: present
+    update_cache: yes
+
+- name: Add NodeSource repository
+  shell: curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+
+- name: Install Node.js
+  apt:
+    name: nodejs
+    state: present
+
+- name: Install PM2 globally
+  npm:
+    name: pm2
+    global: yes
+    state: present

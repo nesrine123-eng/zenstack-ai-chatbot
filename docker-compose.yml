@@ -1,0 +1,81 @@
+
+
+services:
+  # Frontend React + Vite
+  frontend:
+    build: ./frontend
+    container_name: chatbot-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_BACKEND_URL=http://localhost:5000
+    depends_on:
+      - backend
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # Backend Express.js
+  backend:
+    build: ./backend
+    container_name: chatbot-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - DATABASE_URL=postgresql://chatbot_user:chatbot_password@database:5432/chatbot_db
+      - NODE_ENV=production
+      - AI_SERVICE_URL=http://ai-service:8000
+    depends_on:
+      database:
+        condition: service_healthy
+      ai-service:
+        condition: service_started
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # Service IA FastAPI + Groq
+  ai-service:
+    build: ./ai-service
+    container_name: chatbot-ai
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - GROQ_MODEL=${GROQ_MODEL:-llama-3.3-70b-versatile}
+      - BACKEND_URL=http://backend:5000
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # Database PostgreSQL avec persistance des données
+  database:
+    image: postgres:15-alpine
+    container_name: chatbot-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local

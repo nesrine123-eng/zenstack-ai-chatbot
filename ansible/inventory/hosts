@@ -1,0 +1,18 @@
+[devops]
+192.168.56.10
+
+[app]
+192.168.56.11
+
+[database]
+192.168.56.12
+
+[monitoring]
+192.168.56.13
+
+[all:vars]
+ansible_user=vagrant
+ansible_ssh_pass=vagrant
+ansible_become_pass=vagrant
+ansible_python_interpreter=/usr/bin/python3
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'

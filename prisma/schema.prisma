@@ -12,17 +12,21 @@ generator client {
   provider = "prisma-client-js"
 }
 
+/// @@allow('read', !private)
+/// @@allow('all', owner == auth())
 model List {
   id        String   @id() @default(uuid())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt()
   owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   ownerId   String
+  /// @length(1, 100)
   title     String
   private   Boolean  @default(false)
   todos     Todo[]
 }
 
+/// @@allow('all', check(list, 'read'))
 model Todo {
   id          String    @id() @default(uuid())
   createdAt   DateTime  @default(now())
@@ -31,14 +35,19 @@ model Todo {
   ownerId     String
   list        List      @relation(fields: [listId], references: [id], onDelete: Cascade)
   listId      String
+  /// @length(1, 100)
   title       String
   completedAt DateTime?
 }
 
+/// @@allow('create,read', true)
+/// @@allow('update,delete', auth() == this)
 model User {
   id       String  @id() @default(cuid())
   name     String?
   email    String? @unique()
+  /// @password
+  /// @omit
   password String
   todo     Todo[]
   list     List[]

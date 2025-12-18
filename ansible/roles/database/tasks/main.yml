@@ -1,0 +1,43 @@
+- name: Install PostgreSQL
+  apt:
+    name:
+      - postgresql
+      - postgresql-contrib
+      - python3-psycopg2
+    state: present
+    update_cache: yes
+
+- name: Start PostgreSQL service
+  systemd:
+    name: postgresql
+    state: started
+    enabled: yes
+
+- name: Configure PostgreSQL to listen on all interfaces
+  lineinfile:
+    path: /etc/postgresql/12/main/postgresql.conf
+    regexp: '^#?listen_addresses'
+    line: "listen_addresses = '*'"
+  notify: restart postgresql
+
+- name: Allow remote connections in pg_hba.conf
+  lineinfile:
+    path: /etc/postgresql/12/main/pg_hba.conf
+    line: "host    all             all             192.168.56.0/24         md5"
+  notify: restart postgresql
+
+- name: Create database user
+  postgresql_user:
+    name: zenstack
+    password: zenstack123
+    state: present
+  become: yes
+  become_user: postgres
+
+- name: Create database
+  postgresql_db:
+    name: zenstack_db
+    owner: zenstack
+    state: present
+  become: yes
+  become_user: postgres
