@@ -2,20 +2,23 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Copier package.json et package-lock.json
+# Installer OpenSSL (recommandé pour Prisma)
+RUN apk add --no-cache openssl
+
+# Copier package.json et lock
 COPY package*.json ./
 
-# Copier le dossier prisma (si existe)
-COPY prisma ./prisma/ 2>/dev/null || echo "No prisma folder"
+# Copier Prisma AVANT npm install
+COPY prisma ./prisma
 
 # Installer les dépendances
-RUN npm install --legacy-peer-deps || npm install
+RUN npm install --legacy-peer-deps
 
-# Copier tout le reste du code
+# Copier le reste du code
 COPY . .
 
-# Générer Prisma (optionnel, peut échouer sans erreur)
-RUN npx prisma generate 2>/dev/null || echo "Prisma generation skipped"
+# Générer Prisma
+RUN npx prisma generate
 
 # Build Next.js
 RUN npm run build
@@ -23,3 +26,5 @@ RUN npm run build
 EXPOSE 3000
 
 CMD ["npm", "start"]
+
+
