@@ -7,40 +7,32 @@ pipeline {
     }
     
     stages {
-        stage('Checkout') {
+        stage('Build Image') {
             steps {
-                echo 'Cloning repository...'
-                git branch: 'main', url: 'https://github.com/votre-repo/zenstack-ai-chatbot.git'
-            }
-        }
-        
-        stage('Build Images') {
-            steps {
-                echo 'Building Docker images...'
+                echo '🏗️ Construction de l\'image Docker...'
                 sh '''
-                    docker build -t ${REGISTRY}/chatbot-frontend:latest ./frontend
-                    docker build -t ${REGISTRY}/chatbot-backend:latest ./backend
-                    docker build -t ${REGISTRY}/chatbot-ai:latest ./ai-service
+                    docker build -t ${REGISTRY}/zenstack-chatbot:latest .
                 '''
             }
         }
         
         stage('Push to Registry') {
             steps {
-                echo 'Pushing images to registry...'
+                echo '📤 Push vers le registry Docker...'
                 sh '''
-                    docker push ${REGISTRY}/chatbot-frontend:latest
-                    docker push ${REGISTRY}/chatbot-backend:latest
-                    docker push ${REGISTRY}/chatbot-ai:latest
+                    docker push ${REGISTRY}/zenstack-chatbot:latest
                 '''
             }
         }
         
         stage('Deploy') {
             steps {
-                echo 'Deploying to app VM...'
+                echo '🚀 Déploiement sur le serveur...'
                 sh '''
-                    ssh vagrant@${APP_VM} "cd /home/vagrant && docker-compose -f docker-compose.prod.yml pull && docker-compose -f docker-compose.prod.yml up -d"
+                    ssh -o StrictHostKeyChecking=no vagrant@${APP_VM} "docker pull ${REGISTRY}/zenstack-chatbot:latest"
+                    ssh -o StrictHostKeyChecking=no vagrant@${APP_VM} "docker stop zenstack-chatbot || true"
+                    ssh -o StrictHostKeyChecking=no vagrant@${APP_VM} "docker rm zenstack-chatbot || true"
+                    ssh -o StrictHostKeyChecking=no vagrant@${APP_VM} "docker run -d --name zenstack-chatbot -p 3000:3000 ${REGISTRY}/zenstack-chatbot:latest"
                 '''
             }
         }
@@ -48,10 +40,10 @@ pipeline {
     
     post {
         success {
-            echo 'Pipeline completed successfully!'
+            echo '✅ Pipeline terminé avec succès!'
         }
         failure {
-            echo 'Pipeline failed!'
+            echo '❌ Pipeline a échoué!'
         }
     }
 }
